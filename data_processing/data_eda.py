@@ -7,6 +7,9 @@ import numpy as np
 import statsmodels.api as sm
 import itertools
 import warnings
+from prophet import Prophet
+import matplotlib.pyplot as plt
+from numpy import polyfit
 
 
 def read_csv(path):
@@ -69,6 +72,8 @@ def get_df():
 
 
 df = get_df()
+
+
 
 plt.figure(figsize=(16, 10))
 plt.title("Distribution des Bruttes bruttes et validees")
@@ -182,51 +187,18 @@ def VARMAX_model(df_train, df_test):
     return res
 
 
-res = VARMAX_model(df_train, df_test)
-show_graph(df_train, res, "Vector Autoregression Moving-Average with Exogenous Regressors (VARMAX)")
 
-plt.figure()
-plt.plot(res)
-plt.show()
-
-fig, ax = plt.subplots(figsize=(15, 5))
-ax.set(
-    title='True and Predicted Values, with Confidence Intervals',
-    xlabel='Date',
-    ylabel='Actual / Predicted Values'
-)
-yhat['mean'].plot(ax=ax, style='r', label='Predicted Mean')
-ax.fill_between(
-    yhat.index, yhat['mean_ci_lower'], yhat['mean_ci_upper'],
-    color='r', alpha=0.1
-)
-legend = ax.legend(loc='upper left')
-plt.show()
-
-# remove seasonality from time series using fitted prophet model (by hour)
-# compute a moving standard deviation and remove outlier
-
-
-from prophet import Prophet
-import matplotlib.pyplot as plt
-from numpy import polyfit
-
-df.loc[(df["Brutte_aval"] < 20), "Brutte_aval"] = None
-df.loc[(df["Brutte_aval"] > 24), "Brutte_aval"] = None
-
-series = df["Brutte_aval"].dropna()
-plt.figure()
-plt.plot(series)
-plt.show()
 # fit polynomial: x^2*b1 + x*b2 + ... + bn
 
 """
 RELEVANT CODE IS HERE ###################################################################################################
 """
-def polydiff(series):
+
+
+def polydiff(series, degree=4):
     X = [i % 365 for i in range(0, len(series))]
     y = series.values
-    degree = 4
+
     coef = polyfit(X, y, degree)
     print('Coefficients: %s' % coef)
     # create curve
@@ -244,8 +216,7 @@ def polydiff(series):
         diff.append(value)
     return diff
 
-
-def exp_diff(diff, x):
+def compute_exp_diff(diff, x):
     exp_diffs = list(np.zeros(x))
     for i, j in enumerate(diff[x:-x]):
         _diff = np.sum((j - diff[i - x:i + x]) ** 2)
@@ -254,14 +225,89 @@ def exp_diff(diff, x):
     return np.asarray(exp_diffs)
 
 
-def plot_graphs(exp_diff_, series):
+def plot_graphs(exp_diff_, series, series_name = "Brutte_aval"):
     fig, ax = plt.subplots(4)
 
-    ax[0].hist(exp_diff_)
-    ax[1].hist(series, bins=50)
-    ax[2].plot(series)
+    ax[0].set_title(f"Histogram of {series_name}")
+    ax[0].hist(series, bins=50)
+
+    ax[1].set_title(f"Trend of {series_name}")
+    ax[1].plot(series)
+
+    ax[2].set_title("Histogram of exponential differences")
+    ax[2].hist(exp_diff_)
+
+    ax[2].set_title("Trend of exponential differences")
     ax[3].plot(exp_diff_)
 
+
+def replace_outliers_in_series(df, low_threshold=20, up_threshold=24, series="Brutte_aval"):
+    low_threshold_ind = df[series][(df[series] < low_threshold)].index
+    high_threshold_ind = df[series][(df[series] > up_threshold)].index
+
+    indexes = {
+        "low_threshold": low_threshold_ind,
+        "high_threshold": high_threshold_ind
+
+    }
+
+    df.loc[low_threshold_ind, series] = np.nan
+    df.loc[high_threshold_ind, series] = np.nan
+
+    return df[series], indexes
+
+
+def filer_based_on_exp_diff(series, exp_diff_, pct_spike=0.03, plotgraphs_prior_filer = None, series_name = None):
+    exp_diff_sorted = np.sort(exp_diff_)
+    threshold = exp_diff_sorted[int(exp_diff_sorted.shape[0] * (1 - pct_spike))]
+
+    above_threshold_ind = exp_diff_ > threshold
+    above_threshold_ind = np.argwhere(above_threshold_ind == True).flatten().tolist()
+
+    diff_zero_ind = series[exp_diff_ == 0].index
+
+    indexes = {
+        "above_spike_treshold": above_threshold_ind,
+        "diff_is_zero": diff_zero_ind
+
+    }
+
+    if plotgraphs_prior_filer:
+        plot_graphs(exp_diff_, series, series_name)
+
+    series.loc[above_threshold_ind] = np.nan
+    series.loc[diff_zero_ind] = np.nan
+
+    exp_diff_[above_threshold_ind] = np.nan
+    exp_diff_[diff_zero_ind] = np.nan
+
+    return series, exp_diff_, indexes
+
+
+def remove_spike_anomaly(series):
+    series = series.interpolate("linear")
+    diff = polydiff(series, degree=4)
+    exp_diff_ = compute_exp_diff(diff, x=4)
+    series, exp_diff_, indexes = filer_based_on_exp_diff(series, exp_diff_, True, "Brutte_aval")
+
+    return series, exp_diff_, indexes
+
+
+
+df = get_df()
+series, indexes_outliers = replace_outliers_in_series(df, 20, 24, "Brutte_aval")
+series, exp_diff_, indexes_spike = remove_spike_anomaly(series)
+
+
+
+
+# plot_graphs(exp_diff, series, "Brutte_aval")
+
+plt.figure()
+plt.plot(series)
+plt.show()
+
+series.isna().sum()
 
 
 """
@@ -278,7 +324,6 @@ plt.figure()
 plt.plot(diff)
 plt.show()
 
-
 exp_diff_ = exp_diff(diff, 4)
 # plot_graphs(exp_diff_, series)
 exp_diff_sorted = np.sort(exp_diff_)
@@ -286,7 +331,7 @@ exp_diff_sorted = np.sort(exp_diff_)
 treshold = exp_diff_sorted[int(exp_diff_sorted.shape[0] * 0.98)]
 series.loc[(exp_diff_ > treshold)] = np.nan
 series.loc[exp_diff_ == 0] = np.nan
-exp_diff_[(exp_diff_ > treshold) ] = np.nan
+exp_diff_[(exp_diff_ > treshold)] = np.nan
 exp_diff_[exp_diff_ == 0] = np.nan
 
 series.isna().sum()
@@ -305,10 +350,21 @@ plt.plot(x)
 plt.show()
 
 x = series[1500000: 1508000].values
+x1 = df['Brutte_aval'][1500000: 1508000].values
 plt.figure()
-plt.plot(x)
+plt.plot(x, alpha = 0.8)
+plt.plot(x1, alpha = 0.5)
 plt.show()
 
+
+x = series[1300000: 1308000].values
+x1 = df['Brutte_aval'][1300000: 1308000].values
+plt.figure(figsize=(16, 8))
+plt.title("Série corrigée vs. série brutte")
+plt.plot(x, alpha = 1, label = "Série corrigée")
+plt.plot(x1, alpha = 0.3, color = "red", label = "Série brutte")
+plt.legend()
+plt.show()
 
 plt.figure()
 plt.plot(x)
@@ -369,19 +425,18 @@ df = df.reset_index()
 df["Date"] = df["Year"].astype(int).astype(str) + "-" + df["Month"].astype(int).astype(str) + "-" + df["Day"].astype(
     int).astype(str)
 df["Date"] = pd.to_datetime(df["Date"])
-df.loc[(df["Brutte_aval"] < 15), "Brutte_aval_smoothed"] = None
-df.loc[(df["Brutte_aval"] > 40), "Brutte_aval_smoothed"] = None
+df.loc[(df["Brutte_aval"] < 20), "Brutte_aval"] = None
+df.loc[(df["Brutte_aval"] > 25), "Brutte_aval"] = None
 
-y = df[["Date", "Brutte_aval_smoothed", "Brutte_quai"]]
-y = y.rename(columns={"Date": "ds", "Brutte_aval_smoothed": "y"})
-df_train = y[:5600]
+y = df[["Date", "Brutte_quai", "Brutte_aval"]]
+y = y.rename(columns={"Date": "ds", "Brutte_aval": "y"})
 
-model = Prophet()
-model.fit(df_train)
+model = Prophet(changepoint_prior_scale=0.01)
+model.fit(y)
 print("model fitted")
-forecast = model.make_future_dataframe(periods=169)
+forecast = model.make_future_dataframe(periods=1, freq='H')
 forecast = model.predict(forecast)
-fig = model.plot(forecast[5400:])
+fig = model.plot(forecast)
 
 brutte_aval_forecast = model.predict(forecast)
 brutte_aval_forecast = pd.merge(brutte_aval_forecast, df[["Date", "Brutte_aval"]], left_on="ds", right_on="Date")
@@ -401,8 +456,15 @@ plt.plot(brutte_aval_forecast["yhat_upper"], label="Pred_upper")
 plt.show()
 
 df = get_df()
-df["Date"] = df["Year"].astype(int).astype(str) + "-" + df["Month"].astype(int).astype(str) + "-" + df["Day"].astype(
-    int).astype(str)
+df["Date_H"] = df['Date'].dt.round('D')
+df = pd.merge(df, forecast[["yhat", "ds"]], left_on="Date_H", right_on="ds")
+
+diff = df["Brutte_aval"] - df["yhat"]
+
+plt.figure()
+plt.plot(diff)
+plt.show()
+
 df["Date"] = pd.to_datetime(df["Date"])
 
 df_pred = pd.merge(df, forecast[5600:5601], left_on="Date", right_on="ds")
