@@ -73,8 +73,6 @@ def get_df():
 
 df = get_df()
 
-
-
 plt.figure(figsize=(16, 10))
 plt.title("Distribution des Bruttes bruttes et validees")
 sns.histplot(data=df[(df["Brutte_aval"] > 15) & (df["Brutte_aval"] < 45)], x="Brutte_aval", hue="Error_aval", bins=100,
@@ -187,116 +185,11 @@ def VARMAX_model(df_train, df_test):
     return res
 
 
-
 # fit polynomial: x^2*b1 + x*b2 + ... + bn
 
 """
 RELEVANT CODE IS HERE ###################################################################################################
 """
-
-
-def polydiff(series, degree=4):
-    X = [i % 365 for i in range(0, len(series))]
-    y = series.values
-
-    coef = polyfit(X, y, degree)
-    print('Coefficients: %s' % coef)
-    # create curve
-    curve = list()
-    for i in range(len(X)):
-        value = coef[-1]
-        for d in range(degree):
-            value += X[i] ** (degree - d) * coef[d]
-        curve.append(value)
-    # create seasonally adjusted
-    values = series.values
-    diff = list()
-    for i in range(len(values)):
-        value = values[i] - curve[i]
-        diff.append(value)
-    return diff
-
-def compute_exp_diff(diff, x):
-    exp_diffs = list(np.zeros(x))
-    for i, j in enumerate(diff[x:-x]):
-        _diff = np.sum((j - diff[i - x:i + x]) ** 2)
-        exp_diffs.append(_diff)
-    exp_diffs += list(np.zeros(x))
-    return np.asarray(exp_diffs)
-
-
-def plot_graphs(exp_diff_, series, series_name = "Brutte_aval"):
-    fig, ax = plt.subplots(4)
-
-    ax[0].set_title(f"Histogram of {series_name}")
-    ax[0].hist(series, bins=50)
-
-    ax[1].set_title(f"Trend of {series_name}")
-    ax[1].plot(series)
-
-    ax[2].set_title("Histogram of exponential differences")
-    ax[2].hist(exp_diff_)
-
-    ax[2].set_title("Trend of exponential differences")
-    ax[3].plot(exp_diff_)
-
-
-def replace_outliers_in_series(df, low_threshold=20, up_threshold=24, series="Brutte_aval"):
-    low_threshold_ind = df[series][(df[series] < low_threshold)].index
-    high_threshold_ind = df[series][(df[series] > up_threshold)].index
-
-    indexes = {
-        "low_threshold": low_threshold_ind,
-        "high_threshold": high_threshold_ind
-
-    }
-
-    df.loc[low_threshold_ind, series] = np.nan
-    df.loc[high_threshold_ind, series] = np.nan
-
-    return df[series], indexes
-
-
-def filer_based_on_exp_diff(series, exp_diff_, pct_spike=0.03, plotgraphs_prior_filer = None, series_name = None):
-    exp_diff_sorted = np.sort(exp_diff_)
-    threshold = exp_diff_sorted[int(exp_diff_sorted.shape[0] * (1 - pct_spike))]
-
-    above_threshold_ind = exp_diff_ > threshold
-    above_threshold_ind = np.argwhere(above_threshold_ind == True).flatten().tolist()
-
-    diff_zero_ind = series[exp_diff_ == 0].index
-
-    indexes = {
-        "above_spike_treshold": above_threshold_ind,
-        "diff_is_zero": diff_zero_ind
-
-    }
-
-    if plotgraphs_prior_filer:
-        plot_graphs(exp_diff_, series, series_name)
-
-    series.loc[above_threshold_ind] = np.nan
-    series.loc[diff_zero_ind] = np.nan
-
-    exp_diff_[above_threshold_ind] = np.nan
-    exp_diff_[diff_zero_ind] = np.nan
-
-    return series, exp_diff_, indexes
-
-
-def remove_spike_anomaly(series):
-    series = series.interpolate("linear")
-    diff = polydiff(series, degree=4)
-    exp_diff_ = compute_exp_diff(diff, x=4)
-    series, exp_diff_, indexes = filer_based_on_exp_diff(series, exp_diff_, True, "Brutte_aval")
-
-    return series, exp_diff_, indexes
-
-
-
-df = get_df()
-series, indexes_outliers = replace_outliers_in_series(df, 20, 24, "Brutte_aval")
-series, exp_diff_, indexes_spike = remove_spike_anomaly(series)
 
 
 
@@ -308,7 +201,6 @@ plt.plot(series)
 plt.show()
 
 series.isna().sum()
-
 
 """
 RELEVANT CODE IS HERE ###################################################################################################
@@ -352,17 +244,16 @@ plt.show()
 x = series[1500000: 1508000].values
 x1 = df['Brutte_aval'][1500000: 1508000].values
 plt.figure()
-plt.plot(x, alpha = 0.8)
-plt.plot(x1, alpha = 0.5)
+plt.plot(x, alpha=0.8)
+plt.plot(x1, alpha=0.5)
 plt.show()
-
 
 x = series[1300000: 1308000].values
 x1 = df['Brutte_aval'][1300000: 1308000].values
 plt.figure(figsize=(16, 8))
 plt.title("Série corrigée vs. série brutte")
-plt.plot(x, alpha = 1, label = "Série corrigée")
-plt.plot(x1, alpha = 0.3, color = "red", label = "Série brutte")
+plt.plot(x, alpha=1, label="Série corrigée")
+plt.plot(x1, alpha=0.3, color="red", label="Série brutte")
 plt.legend()
 plt.show()
 
