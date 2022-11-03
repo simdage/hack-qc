@@ -1,25 +1,22 @@
 
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QGridLayout, QDateEdit, QHBoxLayout, QSizePolicy, QVBoxLayout, QLabel, QScrollArea
 from PyQt5.QtCore import QSize, Qt, QDateTime, QDate
-from PyQt5.QtGui import QPalette, QColor, QFont
+from PyQt5.QtGui import QPalette, QColor, QFont, QIcon, QPixmap
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from functools import partial
 
-# Only needed for access to command line arguments
 import sys
 from utils import get_df
 
-# You need one (and only one) QApplication instance per application.
-# Pass in sys.argv to allow command line arguments for your app.
-# If you know you won't use command line arguments QApplication([]) works too.
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.data = get_df()
         self.setWindowTitle("Hack-QC - IUVO-AI")
         self.selectedError = 0
+        self.selectedView = 0 
         self.layout = QGridLayout()
 
         calendar_layout = self.displayCalendar()
@@ -48,8 +45,20 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(widget)
     
     def displayTitle(self, row, col):
+        title_layout = QHBoxLayout()
+
+        icon = QLabel()
+        pixmap = QPixmap('ui/hydro-small.png')
+        
+        icon.setPixmap(pixmap.scaled(100, 100))
+        icon.setStyleSheet(
+                        "border-style: solid;"
+                        "border-width: 5px;"
+                        "border-color: blue;"
+                        "border-radius: 3px")
+
         title = QLabel()
-        title.setText("E.A.U. Erreur Automatique Update fait par <font color=teal>IUVO-AI</font>")
+        title.setText("S.C.E.A.U. fait par <font color=teal>IUVO-AI</font>")
         title.setFont(QFont('Arial', 30))
         title.setAutoFillBackground(True)
         title.setStyleSheet("background-color: white;"
@@ -59,17 +68,34 @@ class MainWindow(QMainWindow):
                              "border-radius: 3px")
         title.setAlignment(Qt.AlignCenter)
 
-        self.layout.addWidget(title, row, col)
+        title_layout.addWidget(icon)
+        title_layout.addWidget(title)
+        title_layout.setStretch(1,5)
+        self.layout.addLayout(title_layout, row, col)
 
     def displayData(self, row, col):
         plotlayout = QVBoxLayout()
         temp_var = self.dateedit.date() 
         date = temp_var.toPyDate()
-        self.daily = self.data.query(f'Year == {date.year} and Month == {date.month} and Day == {date.day}')
+        
+        ####### TODO: TO CHANGE LATER MAYBE IF WE WANT TO DO ZOOM 
+        info_day = self.data.query(f'Year == {date.year} and Month == {date.month} and Day == {date.day}')
+        if self.selectedError == 0:
+            self.daily = self.data[info_day.index[0]-36 : info_day.index[-1]]
+        elif self.selectedError > 0:
+            info_error = info_day.query(f"Hour == {self.selectedError-1}")
+            if len(info_error) != 0:
+                self.daily = self.data[info_error.index[0]-6 : info_error.index[-1]+6]
+            else:
+                self.daily = self.data[info_day.index[0]-36 : info_day.index[-1]]
         self.sc = MplCanvas(self, width=5, height=4, dpi=100)
         # Date Brutte_aval
-        self.daily.set_index('Date').plot(y='Brutte_aval',title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
-        self.daily.set_index('Date').plot(y='Validee_aval', ax=self.sc.axes).legend(loc='upper left')
+
+        if self.selectedView <= 0:
+            self.daily.set_index('Date').plot(label= 'Bruttes', y='Brutte_aval', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+        if self.selectedView >= 0:
+            self.daily.set_index('Date').plot(label= 'Corrigées', y='Validee_aval', color = 'orange', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+        self.sc.axes.title.set_size(40)
         
         toolbar = NavigationToolbar(self.sc, self)
         plotlayout.addWidget(toolbar)
@@ -133,8 +159,8 @@ class MainWindow(QMainWindow):
             no_error_selection.setStyleSheet("background-color: gray")
         vbox.addWidget(no_error_selection)
 
-        for i in range(1,50):
-            error_selection = QPushButton(f"{i} - 00:00:00")
+        for i in range(1,25):
+            error_selection = QPushButton(f"{i} - {str(i-1).zfill(2)}:00")
             error_selection.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
             error_selection.clicked.connect(partial(self.errorButtonClicked, i))
             error_selection.setFont(QFont('Arial', 20))
@@ -176,21 +202,97 @@ class MainWindow(QMainWindow):
         panel = QWidget() 
         information_layout = QVBoxLayout(panel)
         information_label = QLabel()
+        information_title = QLabel()
+        ### TODO: add extra things here -> add choice of different recommendations / manual input
         if self.selectedError == 0:
             text = "Information générale"
+            info = f"Nombre d'erreur : X \n" \
+                f"Nombre d'erreur corrigee : X \n"
         else:
             text = f"Information sur erreur {self.selectedError}"
-        information_label.setText(text)
+            info = f"Raison de la correction : \n" \
+                f"Duree : X \n" \
+                    f"Moyenne : X \n"\
+                        f"Mediane : X \n"
+        information_title.setText(text)
+        information_label.setText(info)
         # information_label.setAlignment(Qt.AlignUpperLeft)
+
+        information_menu_layout = QHBoxLayout()
+        show_label = QLabel()
+        show_label.setText('Affichage: ')
+        show_label.setAlignment(Qt.AlignRight)
+        self.show_all_button = QPushButton("Tout")
+        self.show_all_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.show_all_button.setCheckable(True)
+        self.show_all_button.clicked.connect(self.showAllButtonClicked)
+        self.show_validated_button = QPushButton("Corrigé")
+        self.show_validated_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.show_validated_button.setCheckable(True)
+        self.show_validated_button.clicked.connect(self.showValidatedButtonClicked)
+        self.show_raw_button = QPushButton("Brutte")
+        self.show_raw_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.show_raw_button.setCheckable(True)
+        self.show_raw_button.clicked.connect(self.showRawButtonClicked)
+
+        if self.selectedView == 0:
+            self.show_all_button.setChecked(True)
+        elif self.selectedView == 1:
+            self.show_validated_button.setChecked(True)
+        elif self.selectedView == -1:
+            self.show_raw_button.setChecked(True)
+
+        change_label = QLabel()
+        change_label.setText('Correction: ')
+        change_label.setAlignment(Qt.AlignRight)
+        flag_button = QPushButton("Signaler")
+        flag_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        manual_button = QPushButton("Manuel")
+        manual_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        deactivate_button = QPushButton("Déactiver")
+        deactivate_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+
+        information_menu_layout.addWidget(show_label)
+        information_menu_layout.addWidget(self.show_all_button)
+        information_menu_layout.addWidget(self.show_validated_button)
+        information_menu_layout.addWidget(self.show_raw_button)
+        information_menu_layout.addWidget(change_label)
+        information_menu_layout.addWidget(flag_button)
+        information_menu_layout.addWidget(manual_button)
+        information_menu_layout.addWidget(deactivate_button)
+
+
+
+        information_layout.addWidget(information_title)
         information_layout.addWidget(information_label)
-        panel.setStyleSheet("background-color: white;"
+        information_layout.addLayout(information_menu_layout)
+        information_layout.setStretch(1, 5)
+        panel.setObjectName('panel')
+        panel.setStyleSheet("QWidget#panel {background-color: white;"
                              "border-style: solid;"
                              "border-width: 5px;"
                              "border-color: gray;"
-                             "border-radius: 3px")
-        information_label.setStyleSheet("border-width: 0px;")
+                             "border-radius: 3px}")
+        # information_label.setStyleSheet("border-width: 0px;")
         self.layout.addWidget(panel, row, col)
 
+    def showAllButtonClicked(self):
+        self.show_validated_button.setChecked(False)
+        self.show_raw_button.setChecked(False)
+        self.selectedView = 0
+        self.update()
+
+    def showValidatedButtonClicked(self):
+        self.show_all_button.setChecked(False)
+        self.show_raw_button.setChecked(False)
+        self.selectedView = 1
+        self.update()
+
+    def showRawButtonClicked(self):
+        self.show_validated_button.setChecked(False)
+        self.show_all_button.setChecked(False)
+        self.selectedView = -1
+        self.update()
 
     def prevButtonClicked(self):
         temp_var = self.dateedit.date()
@@ -207,9 +309,7 @@ class MainWindow(QMainWindow):
         self.update()
 
     def errorButtonClicked(self, i):
-        print(f'pushed button {i}')
         self.selectedError = i
-
         self.update()
 
     def update(self):
@@ -235,6 +335,7 @@ if __name__ == "__main__":
 
     # Create a Qt widget, which will be our window.
     window = MainWindow()
+    # window.setStyleSheet("QMainWindow {background: 'dark grey';}")
     window.show()  # IMPORTANT!!!!! Windows are hidden by default.
 
     # Start the event loop.
