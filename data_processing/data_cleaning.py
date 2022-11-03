@@ -155,11 +155,23 @@ def remove_spike_anomaly(series, pct_spike=0.03, plotgraphs_prior_filer=None, se
 
 
 def interpolate_missing_data(series):
-    series = series.interpolate(method='spline', order=2)
+    series = series.interpolate(method='linear')
     return series
 
 
-df = get_df()
-series, indexes_outliers = replace_outliers_in_series(df, 20, 24, "Brutte_aval")
-series, exponential_diff_, indexes_spike = remove_spike_anomaly(series)
-series = interpolate_missing_data(series)
+if __name__ == "__main__":
+    df = get_df()
+    series, indexes_outliers = replace_outliers_in_series(df, 20, 24, "Brutte_aval")
+    series, exponential_diff_, indexes_spike = remove_spike_anomaly(series)
+    series = interpolate_missing_data(series)
+
+    series_1 = series.copy()
+
+    x = series[1300000: 1308000].values
+    x1 = df['Brutte_aval'][1300000: 1308000].values
+    plt.figure(figsize=(16, 8))
+    plt.title("Série corrigée vs. série brutte")
+    plt.plot(x, alpha=1, label="Série corrigée")
+    plt.plot(x1, alpha=0.3, color="red", label="Série brutte")
+    plt.legend()
+    plt.show()

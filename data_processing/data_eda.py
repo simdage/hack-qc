@@ -150,16 +150,6 @@ for i in [3000, 5000, 6000, 8000]:
 from statsmodels.tsa.statespace.varmax import VARMAX
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-from random import random
-import pandas as pd
-import numpy as np
-import warnings
-import matplotlib.pyplot as plt
-
-warnings.simplefilter('ignore')
-
-precip = read_csv("dataset_csv/cas1/")
-
 
 # Common code for display result
 def show_graph(df1, df2, title):
@@ -186,25 +176,6 @@ def VARMAX_model(df_train, df_test):
 
 
 # fit polynomial: x^2*b1 + x*b2 + ... + bn
-
-"""
-RELEVANT CODE IS HERE ###################################################################################################
-"""
-
-
-
-
-# plot_graphs(exp_diff, series, "Brutte_aval")
-
-plt.figure()
-plt.plot(series)
-plt.show()
-
-series.isna().sum()
-
-"""
-RELEVANT CODE IS HERE ###################################################################################################
-"""
 
 plt.figure()
 plt.plot(series)
