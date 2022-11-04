@@ -1,1 +1,4 @@
 data/
+dataset_csv/
+*/__pycache__/
+*.csv
