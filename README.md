@@ -36,7 +36,7 @@ Nous avons construit S.C.E.A.U. grâce à différentes librairies Python en libr
 
 <img src="https://github.com/simdage/hack-qc/blob/main/results/anomalie_locale1.png">
 
-<img src="https://github.com/simdage/hack-qc/blob/main/results/https://github.com/simdage/hack-qc/blob/main/results/series_temporelle_beau.png">
+<img src="https://github.com/simdage/hack-qc/blob/main/results/series_temporelle_beau.png">
 
-<img src="https://github.com/simdage/hack-qc/blob/main/results/https://github.com/simdage/hack-qc/blob/main/results/corrected_vs_validated.png">
+<img src="https://github.com/simdage/hack-qc/blob/main/results/corrected_vs_validated.png">
 
