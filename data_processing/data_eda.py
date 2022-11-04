@@ -129,6 +129,8 @@ def identify_mistake_set(df, error_col):
     return mistake_sets
 
 
+import plotly.express as px
+
 mistake_set = identify_mistake_set(df, "Error_aval")
 df["Mistake_set_aval"] = mistake_set
 
@@ -137,6 +139,16 @@ df["Mistake_set_quai"] = mistake_set
 
 for i in [3000, 5000, 6000, 8000]:
     indexes = df[df["Mistake_set_aval"] == i].index
+    plt.figure()
+    plt.title("Comparaison des séries validées et brutes pour Beauharnois")
+    plt.plot(df.iloc[indexes.min() - 2000:indexes.max() + 2000, ]["Brutte_aval"], color = "red", label = "Brute_aval")
+    plt.plot(df.iloc[indexes.min() - 2000:indexes.max() + 2000, ]["Validee_aval"], color = "green", label = "Validee_aval")
+    plt.plot(df.iloc[indexes.min() - 2000:indexes.max() + 2000,]["Brutte_quai"], color = "red", label ="Brute_quai")
+    plt.plot(df.iloc[indexes.min() - 2000:indexes.max() + 2000, ]["Validee_quai"], color = 'blue', label = "Validee_quai")
+    plt.legend()
+    plt.show()
+
+
     fig = px.line(df.iloc[indexes.min() - 2000:indexes.max() + 2000, :], "Date",
                   y=["Brutte_aval", "Validee_aval", "Brutte_quai", "Validee_quai"],
                   color_discrete_map={
@@ -215,16 +227,30 @@ plt.show()
 x = series[1500000: 1508000].values
 x1 = df['Brutte_aval'][1500000: 1508000].values
 plt.figure()
-plt.plot(x, alpha=0.8)
-plt.plot(x1, alpha=0.5)
+plt.title("Détection anomalie locale: Série corrigée vs. série brute")
+plt.plot(x, alpha=1, label="Série corrigée")
+plt.plot(x1, alpha=0.3, color="red", label="Série brute")
+plt.legend()
+plt.savefig("anomalie_locale.png")
 plt.show()
 
 x = series[1300000: 1308000].values
 x1 = df['Brutte_aval'][1300000: 1308000].values
 plt.figure(figsize=(16, 8))
-plt.title("Série corrigée vs. série brutte")
+plt.title("Série corrigée vs. série brute")
 plt.plot(x, alpha=1, label="Série corrigée")
 plt.plot(x1, alpha=0.3, color="red", label="Série brutte")
+plt.legend()
+plt.show()
+
+
+x = series[2000: 3000].values
+x1 = df['Brutte_aval'][2000: 3000].values
+plt.figure(figsize=(16, 8))
+plt.title("Série corrigée vs. série brute")
+plt.plot(x, alpha=1, label="Série corrigée")
+plt.plot(x1, alpha=0.3, color="red", label="Série brutte")
+plt.savefig("anomalie_locale1.png")
 plt.legend()
 plt.show()
 

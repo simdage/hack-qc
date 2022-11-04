@@ -1,7 +1,7 @@
 import pandas as pd
 from prophet import Prophet
 
-from data_processing.data_cleaning import get_df, read_csv
+from data_processing.data_cleaning import get_df_cas_1, read_csv
 
 # Python
 # df_g = pd.read_csv('https://raw.githubusercontent.com/facebook/prophet/main/examples/example_yosemite_temps.csv')
@@ -10,7 +10,11 @@ from data_processing.data_cleaning import get_df, read_csv
 # fcst = m.predict(future)
 # fig = m.plot(fcst)
 #
-df_g1 = get_df()
+
+
+df_g1 = get_df_cas_1()
+
+
 
 precip = read_csv("dataset_csv/cas_1/precip.csv")
 precip["Date"] = pd.to_datetime(precip["Date"])
@@ -25,11 +29,16 @@ df_g = df_g.rename(columns={"Date_H": "ds", "Brutte_aval": "y"})
 df_g['Valeur'] = df_g['Valeur'].interpolate()
 df_g['Valeur.1'] = df_g['Valeur.1'].interpolate()
 
+df_d = df_g[-24:]
+
 model = Prophet(changepoint_prior_scale=0.01)
 model.add_regressor("Brutte_quai")
 model.add_regressor("Valeur")
 model.add_regressor("Valeur.1")
-model.fit(df_g)
+model.fit(df_d)
 print("model fitted")
-forecast = model.predict(df = df_g[["ds", "Brutte_quai", "Valeur", "Valeur.1"]])
+forecast = model.predict(df = df_d[["ds", "Brutte_quai", "Valeur", "Valeur.1"]])
 fig = model.plot(forecast)
+
+
+
