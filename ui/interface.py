@@ -6,28 +6,42 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from functools import partial
-
+import pandas as pd
 import sys
-from utils import get_df
+# from utils import get_df
+
+def get_df(path):
+    df = pd.read_csv(path)
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    df["Year"] = df["Date"].dt.year
+    df["Month"] = df["Date"].dt.month
+    df["Day"] = df["Date"].dt.day
+
+    df["Hour"] = df["Date"].dt.hour
+    return(df)
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.data = get_df()
+        path = 'ui/corrected_df.csv'
+        error_path = 'ui/errors.csv'
+        self.data = get_df(path)#get_df()
+        self.errors = pd.read_csv(error_path)
         self.setWindowTitle("Hack-QC - IUVO-AI")
         self.selectedError = 0
         self.selectedView = 0 
+        self.showInformation = {}
         self.layout = QGridLayout()
 
         calendar_layout = self.displayCalendar()
         self.layout.addLayout(calendar_layout, 0, 1)
         self.displayTitle(0,0)
-        
+        self.displayErrors(1,1)
         self.displayData(1, 0)
         self.displayMenu(2,1)
- 
         self.displayInformation(2, 0)
-        self.displayErrors(1,1)
+
         
         # method called when signal emitted
 
@@ -83,18 +97,17 @@ class MainWindow(QMainWindow):
         if self.selectedError == 0:
             self.daily = self.data[info_day.index[0]-36 : info_day.index[-1]]
         elif self.selectedError > 0:
-            info_error = info_day.query(f"Hour == {self.selectedError-1}")
-            if len(info_error) != 0:
-                self.daily = self.data[info_error.index[0]-6 : info_error.index[-1]+6]
-            else:
-                self.daily = self.data[info_day.index[0]-36 : info_day.index[-1]]
+            start = info_day[info_day['Date']==self.error_day.iloc[self.selectedError-1]['Start']].index.values[0]
+            finish = info_day[info_day['Date']==self.error_day.iloc[self.selectedError-1]['Finish']].index.values[0]
+            self.daily = self.data[start-6 : finish+6]
+        
         self.sc = MplCanvas(self, width=5, height=4, dpi=100)
         # Date Brutte_aval
 
         if self.selectedView <= 0:
             self.daily.set_index('Date').plot(label= 'Bruttes', y='Brutte_aval', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
         if self.selectedView >= 0:
-            self.daily.set_index('Date').plot(label= 'Corrigées', y='Validee_aval', color = 'orange', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+            self.daily.set_index('Date').plot(label= 'Corrigées', y='Corrected_Brutte_aval', color = 'orange', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
         self.sc.axes.title.set_size(40)
         
         toolbar = NavigationToolbar(self.sc, self)
@@ -159,8 +172,13 @@ class MainWindow(QMainWindow):
             no_error_selection.setStyleSheet("background-color: gray")
         vbox.addWidget(no_error_selection)
 
-        for i in range(1,25):
-            error_selection = QPushButton(f"{i} - {str(i-1).zfill(2)}:00")
+        temp_var = self.dateedit.date() 
+        date = temp_var.toPyDate()
+        self.error_day = self.errors.query(f'Year == {date.year} and Month == {date.month} and Day == {date.day}')
+        
+
+        for i in range(1,len(self.error_day)+1):
+            error_selection = QPushButton(f"{i} - {str(self.error_day.iloc[i-1]['Start'])[-8:]}")
             error_selection.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
             error_selection.clicked.connect(partial(self.errorButtonClicked, i))
             error_selection.setFont(QFont('Arial', 20))
@@ -189,7 +207,7 @@ class MainWindow(QMainWindow):
         # download_report.clicked.connect()
         download_report.setFont(QFont('Arial', 20))
 
-        change_case = QPushButton("Changer de centrale")
+        change_case = QPushButton("Changer de plan d'eau")
         change_case.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         # change_case.clicked.connect()
         change_case.setFont(QFont('Arial', 20))
@@ -206,15 +224,22 @@ class MainWindow(QMainWindow):
         ### TODO: add extra things here -> add choice of different recommendations / manual input
         if self.selectedError == 0:
             text = "Information générale"
-            info = f"Nombre d'erreur : X \n" \
-                f"Nombre d'erreur corrigee : X \n"
+            info = f"Nombre d'erreur : {len(self.error_day)} \n"
         else:
-            text = f"Information sur erreur {self.selectedError}"
-            info = f"Raison de la correction : \n" \
+            text = f"Information sur erreurs #{self.selectedError}"
+            if self.error_day.iloc[self.selectedError-1]['Error'] == 'Random_Spikes':
+                text_error = 'pointes aléatoires'
+            if self.error_day.iloc[self.selectedError-1]['Error'] == 'Lower_outliers':
+                text_error = 'valeurs aberrantes inférieures'
+            if self.error_day.iloc[self.selectedError-1]['Error'] == 'Upper_outliers':
+                text_error = 'valeurs aberrantes supérieures'
+
+            info = f"Raison de la correction : {text_error} \n" \
                 f"Duree : X \n" \
                     f"Moyenne : X \n"\
                         f"Mediane : X \n"
         information_title.setText(text)
+        information_title.setFont(QFont('Arial', 20))
         information_label.setText(info)
         # information_label.setAlignment(Qt.AlignUpperLeft)
 
@@ -315,8 +340,8 @@ class MainWindow(QMainWindow):
     def update(self):
         self.displayData(1, 0)
         self.displayMenu(2,1)
-        self.displayInformation(2, 0)
         self.displayErrors(1,1)
+        self.displayInformation(2, 0)
 
 class MplCanvas(FigureCanvasQTAgg):
 

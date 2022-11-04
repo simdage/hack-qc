@@ -7,7 +7,7 @@ import numpy as np
 import statsmodels.api as sm
 import itertools
 import warnings
-
+import copy
 
 def read_csv(path):
     df = pd.read_csv(path, skiprows=2).iloc[:, 1:]
@@ -67,17 +67,56 @@ def get_df():
     print("df ready")
     return df
 
+def get_errors(df, col_name):
+    
+    
+    error_info = df.query(f'{col_name} == 1')
+
+    response = pd.DataFrame(columns = ['Error', 'Start', 'Finish', 'Year', 'Month','Day'])
+    old = 0
+    start = True
+    error = {'Error':col_name, 'Start':'', 'Finish':''}
+    spike = copy.copy(error)
+    for index in error_info.index:
+        if start:
+            if index != old+1: 
+                old = index
+                spike['Start']=df.loc[index]['Date']
+
+                date = pd.to_datetime(df.loc[index]['Date'])
+                spike["Year"] = date.year
+                spike["Month"] = date.month
+                spike["Day"] = date.day
+                start = False
+        else:
+            if index != old+1:
+                spike['Finish']= df.loc[old]['Date']
+                # response = response.append(spike, ignore_index=True)
+
+                spike = pd.DataFrame.from_dict([spike])
+                response = pd.concat([response, spike], ignore_index=True)
+                # pd.concat([response, pd.DataFrame(spike, columns=response.columns)], ignore_index=True)
+
+                spike = copy.copy(error)
+                spike['Start']=df.loc[index]['Date'] 
+                date = pd.to_datetime(df.loc[index]['Date'])
+                spike["Year"] = date.year
+                spike["Month"] = date.month
+                spike["Day"] = date.day
+
+            old = index
+    return response
+
+
 
 if __name__ == "__main__":
-    # file_name = 'quai_de_beauharnois_2007_2015_brutes.csv'
-    # path = '../dataset_csv/cas_1/'
 
-    # df = pd.read_csv(os.path.join(path, file_name),header=2)
-    # info,data = process_df(df)
-    # print(data)
+    df = pd.read_csv('./corrected_df.csv')
+    
+    Random_Spikes = get_errors(df, 'Random_Spikes')
+    Lower_outliers = get_errors(df, 'Lower_outliers')
+    Upper_outliers = get_errors(df, 'Upper_outliers')
 
-    data = get_df()
-    daily = data.query('Year == 2007 and Month == 1 and Day == 1')
-    plt.plot(daily['Brutte_aval'])
-    plt.ylim([20,25])
-    plt.show()
+    full = pd.concat([Random_Spikes, Lower_outliers, Upper_outliers], ignore_index=True)
+
+    full.to_csv('errors.csv')
