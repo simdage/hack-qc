@@ -102,12 +102,12 @@ class MainWindow(QMainWindow):
             self.daily = self.data[start-6 : finish+6]
         
         self.sc = MplCanvas(self, width=5, height=4, dpi=100)
-        # Date Brutte_aval
+        # Date Brute_aval
 
         if self.selectedView <= 0:
-            self.daily.set_index('Date').plot(label= 'Bruttes', y='Brutte_aval', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+            self.daily.set_index('Date').plot(label= 'Brutes', y='Brutte_aval', title = 'Beauharnois-Aval', legend=True, ax=self.sc.axes).legend(loc='upper left')
         if self.selectedView >= 0:
-            self.daily.set_index('Date').plot(label= 'Corrigées', y='Corrected_Brutte_aval', color = 'orange', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+            self.daily.set_index('Date').plot(label= 'Corrigées', y='Corrected_Brutte_aval', color = 'orange', title = 'Beauharnois-Aval', legend=True, ax=self.sc.axes).legend(loc='upper left')
         self.sc.axes.title.set_size(40)
         
         toolbar = NavigationToolbar(self.sc, self)
@@ -255,7 +255,7 @@ class MainWindow(QMainWindow):
         self.show_validated_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.show_validated_button.setCheckable(True)
         self.show_validated_button.clicked.connect(self.showValidatedButtonClicked)
-        self.show_raw_button = QPushButton("Brutte")
+        self.show_raw_button = QPushButton("Brute")
         self.show_raw_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.show_raw_button.setCheckable(True)
         self.show_raw_button.clicked.connect(self.showRawButtonClicked)
