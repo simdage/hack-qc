@@ -97,17 +97,18 @@ class MainWindow(QMainWindow):
         if self.selectedError == 0:
             self.daily = self.data[info_day.index[0]-36 : info_day.index[-1]]
         elif self.selectedError > 0:
-            start = info_day[info_day['Date']==self.error_day.iloc[self.selectedError-1]['Start']].index.values[0]
-            finish = info_day[info_day['Date']==self.error_day.iloc[self.selectedError-1]['Finish']].index.values[0]
+            # print(self.error_day.iloc[self.selectedError-1])
+            start = self.data[self.data['Date']==self.error_day.iloc[self.selectedError-1]['Start']].index.values[0]
+            finish = self.data[self.data['Date']==self.error_day.iloc[self.selectedError-1]['Finish']].index.values[0]
             self.daily = self.data[start-6 : finish+6]
         
         self.sc = MplCanvas(self, width=5, height=4, dpi=100)
-        # Date Brutte_aval
+        # Date Brute_aval
 
         if self.selectedView <= 0:
-            self.daily.set_index('Date').plot(label= 'Bruttes', y='Brutte_aval', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+            self.daily.set_index('Date').plot(label= 'Brutes', y='Brutte_aval', title = 'Beauharnois-Aval', legend=True, ax=self.sc.axes).legend(loc='upper left')
         if self.selectedView >= 0:
-            self.daily.set_index('Date').plot(label= 'Corrigées', y='Corrected_Brutte_aval', color = 'orange', title = 'Beauharnois', legend=True, ax=self.sc.axes).legend(loc='upper left')
+            self.daily.set_index('Date').plot(label= 'Corrigées', y='Corrected_Brutte_aval', color = 'orange', title = 'Beauharnois-Aval', legend=True, ax=self.sc.axes).legend(loc='upper left')
         self.sc.axes.title.set_size(40)
         
         toolbar = NavigationToolbar(self.sc, self)
@@ -168,6 +169,10 @@ class MainWindow(QMainWindow):
         no_error_selection.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         no_error_selection.clicked.connect(partial(self.errorButtonClicked, 0))
         no_error_selection.setFont(QFont('Arial', 20))
+        # no_error_selection.setMinimumWidth(440)
+        # no_error_selection.setMinimumWidth(440)
+        no_error_selection.setFixedSize(QSize(440, 100))
+
         if self.selectedError ==0:
             no_error_selection.setStyleSheet("background-color: gray")
         vbox.addWidget(no_error_selection)
@@ -182,18 +187,37 @@ class MainWindow(QMainWindow):
             error_selection.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
             error_selection.clicked.connect(partial(self.errorButtonClicked, i))
             error_selection.setFont(QFont('Arial', 20))
+            error_selection.setFixedSize(QSize(440, 100))
+
+            
+
+            if self.error_day.iloc[i-1]['Error'] == 'Random_Spikes':
+                error_selection.setStyleSheet("background-color: orange")
+            if self.error_day.iloc[i-1]['Error'] == 'Lower_outliers':
+                error_selection.setStyleSheet("background-color: rgb(255,215,0)")
+            if self.error_day.iloc[i-1]['Error'] == 'Upper_outliers':
+                error_selection.setStyleSheet("background-color: rgb(255,215,0)")
+            if self.error_day.iloc[i-1]['Error'] == 'Random_forest':
+                error_selection.setStyleSheet("background-color: red")
+
             if i == self.selectedError:
-                error_selection.setStyleSheet("background-color: gray")
+                if self.error_day.iloc[i-1]['Error'] == 'Random_Spikes':
+                    error_selection.setStyleSheet("background-color: rgb(156,102,31)")
+                if self.error_day.iloc[i-1]['Error'] == 'Lower_outliers':
+                    error_selection.setStyleSheet("background-color: rgb(139,101,8)")
+                if self.error_day.iloc[i-1]['Error'] == 'Upper_outliers':
+                    error_selection.setStyleSheet("background-color: rgb(139,101,8)")
+                if self.error_day.iloc[i-1]['Error'] == 'Random_forest':
+                    error_selection.setStyleSheet("background-color: darkred")
             vbox.addWidget(error_selection)
 
         self.widget.setLayout(vbox)
-
+        
         #Scroll Area Properties
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll.setWidgetResizable(True)
+        # self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.widget)
-
         error_layout.addWidget(self.scroll)
         self.layout.addLayout(error_layout, row , col)
 
@@ -228,16 +252,17 @@ class MainWindow(QMainWindow):
         else:
             text = f"Information sur erreurs #{self.selectedError}"
             if self.error_day.iloc[self.selectedError-1]['Error'] == 'Random_Spikes':
-                text_error = 'pointes aléatoires'
+                text_error = 'Locales'
             if self.error_day.iloc[self.selectedError-1]['Error'] == 'Lower_outliers':
-                text_error = 'valeurs aberrantes inférieures'
+                text_error = 'Valeurs flagrante inférieures'
             if self.error_day.iloc[self.selectedError-1]['Error'] == 'Upper_outliers':
-                text_error = 'valeurs aberrantes supérieures'
+                text_error = 'Valeurs flagrante supérieures'
+            if self.error_day.iloc[self.selectedError-1]['Error'] == 'Random_forest':
+                text_error = 'Longue durée'
 
             info = f"Raison de la correction : {text_error} \n" \
-                f"Duree : X \n" \
-                    f"Moyenne : X \n"\
-                        f"Mediane : X \n"
+                f"Duree : {self.error_day.iloc[self.selectedError-1]['Start']} à {self.error_day.iloc[self.selectedError-1]['Finish']}\n" \
+
         information_title.setText(text)
         information_title.setFont(QFont('Arial', 20))
         information_label.setText(info)
@@ -255,7 +280,7 @@ class MainWindow(QMainWindow):
         self.show_validated_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.show_validated_button.setCheckable(True)
         self.show_validated_button.clicked.connect(self.showValidatedButtonClicked)
-        self.show_raw_button = QPushButton("Brutte")
+        self.show_raw_button = QPushButton("Brute")
         self.show_raw_button.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         self.show_raw_button.setCheckable(True)
         self.show_raw_button.clicked.connect(self.showRawButtonClicked)
