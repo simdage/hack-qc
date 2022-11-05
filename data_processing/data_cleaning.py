@@ -14,11 +14,11 @@ def read_csv(path):
 
 
 def get_df_cas_1():
-    df_ba_07_15_b = read_csv("dataset_csv/cas_1/beauharnois_aval_2007_2015_brutes.csv")
-    df_ba_15_22_b = read_csv("dataset_csv/cas_1/beauharnois_aval_2015_2022_brutes.csv")
+    df_ba_07_15_b = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/beauharnois_aval_2007_2015_brutes.csv")
+    df_ba_15_22_b = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/beauharnois_aval_2015_2022_brutes.csv")
 
-    df_ba_07_15_v = read_csv("dataset_csv/cas_1/beauharnois_aval_2007_2015_validees.csv")
-    df_ba_15_22_v = read_csv("dataset_csv/cas_1/beauharnois_aval_2015_2022_validees.csv")
+    df_ba_07_15_v = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/beauharnois_aval_2007_2015_validees.csv")
+    df_ba_15_22_v = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/beauharnois_aval_2015_2022_validees.csv")
 
     df_ba_v = pd.concat([df_ba_07_15_v, df_ba_15_22_v])
     df_ba_b = pd.concat([df_ba_07_15_b, df_ba_15_22_b])
@@ -29,11 +29,12 @@ def get_df_cas_1():
     del df_ba_15_22_v, df_ba_15_22_b, df_ba_07_15_v, df_ba_07_15_b
     df_aval = pd.merge(df_ba_b, df_ba_v, on="Date")
 
-    df_qu_07_15_b = read_csv("dataset_csv/cas_1/quai_de_beauharnois_2007_2015_brutes.csv")
-    df_qu_07_15_v = read_csv("dataset_csv/cas_1/quai_de_beauharnois_2007_2015_validees.csv")
+    df_qu_07_15_b = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/quai_de_beauharnois_2007_2015_brutes.csv")
+    df_qu_07_15_v = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/quai_de_beauharnois_2007_2015_validees.csv")
 
-    df_qu_15_22_b = read_csv("dataset_csv/cas_1/quai_de_beauharnois_2015_2022_brutes.csv")
-    df_qu_15_22_v = read_csv("dataset_csv/cas_1/quai_de_beauharnois_2015_2022_validees.csv")
+    df_qu_15_22_b = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/quai_de_beauharnois_2015_2022_brutes.csv")
+    df_qu_15_22_v = read_csv("/Users/zarreennaowalreza/Documents/iuvo-ai/hack-qc/hack-qc/data/quai_de_beauharnois_2015_2022_validees.csv")
+
 
     df_qu_v = pd.concat([df_qu_07_15_v, df_qu_15_22_v])
     df_qu_b = pd.concat([df_qu_07_15_b, df_qu_15_22_b])
