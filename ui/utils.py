@@ -118,5 +118,5 @@ if __name__ == "__main__":
     Upper_outliers = get_errors(df, 'Upper_outliers')
 
     full = pd.concat([Random_Spikes, Lower_outliers, Upper_outliers], ignore_index=True)
-
+    full = full.sort_values(by=['Start'],ignore_index=True)
     full.to_csv('errors.csv')
