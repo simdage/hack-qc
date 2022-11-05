@@ -327,7 +327,7 @@ if __name__ == "__main__":
 
     aval_clean, aval_index = clean_complete_series(df.copy(), 20, 24, "Brutte_aval")
     aval_corrected_beau = clean_data_and_index_to_df(df, aval_clean, aval_index, "Brutte_aval")
-
+    aval_corrected_beau.to_csv("correct_df.csv", index = False)
     quai_clean, quai_index = clean_complete_series(df.copy(), 20, 24, "Brutte_quai")
     quai_corrected_beau = clean_data_and_index_to_df(df.copy(), quai_clean, quai_index, "Brutte_quai")
 

@@ -137,7 +137,7 @@ df["Mistake_set_aval"] = mistake_set
 mistake_set = identify_mistake_set(df, "Error_quai")
 df["Mistake_set_quai"] = mistake_set
 
-for i in [3000, 5000, 6000, 8000]:
+for i in [3500, 4500]:
     indexes = df[df["Mistake_set_aval"] == i].index
     plt.figure()
     plt.title("Comparaison des séries validées et brutes pour Beauharnois")
